@@ -111,7 +111,7 @@ class FastSpeech(nn.Module):
         # add spk embed
         style_embed = 0
         if self.hparams['use_spk_embed']:
-            style_embed = style_embed + self.spk_embed_proj(spk_embed)[:, None, :]
+            style_embed += self.spk_embed_proj(spk_embed)[:, None, :]
         if self.hparams['use_spk_id']:
             style_embed = style_embed + self.spk_id_proj(spk_id)[:, None, :]
         return style_embed

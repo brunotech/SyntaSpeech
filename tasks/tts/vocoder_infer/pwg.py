@@ -28,5 +28,4 @@ class PWG(BaseVocoder):
             z = None
             with Timer('pwg', enable=hparams['profile_infer']):
                 y = self.model(z, c).view(-1)
-        wav_out = y.cpu().numpy()
-        return wav_out
+        return y.cpu().numpy()

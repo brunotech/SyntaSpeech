@@ -31,8 +31,7 @@ class HighwayNetwork(nn.Module):
         x1 = self.W1(x)
         x2 = self.W2(x)
         g = torch.sigmoid(x2)
-        y = g * F.relu(x1) + (1. - g) * x
-        return y
+        return g * F.relu(x1) + (1. - g) * x
 
 
 class BatchNormConv(nn.Module):
@@ -65,8 +64,7 @@ class ConvNorm(torch.nn.Module):
             self.conv.weight, gain=torch.nn.init.calculate_gain(w_init_gain))
 
     def forward(self, signal):
-        conv_signal = self.conv(signal)
-        return conv_signal
+        return self.conv(signal)
 
 
 class CBHG(nn.Module):
@@ -76,7 +74,7 @@ class CBHG(nn.Module):
         # List of all rnns to call `flatten_parameters()` on
         self._to_flatten = []
 
-        self.bank_kernels = [i for i in range(1, K + 1)]
+        self.bank_kernels = list(range(1, K + 1))
         self.conv1d_bank = nn.ModuleList()
         for k in self.bank_kernels:
             conv = BatchNormConv(in_channels, channels, k)
@@ -95,7 +93,7 @@ class CBHG(nn.Module):
             self.highway_mismatch = False
 
         self.highways = nn.ModuleList()
-        for i in range(num_highways):
+        for _ in range(num_highways):
             hn = HighwayNetwork(channels)
             self.highways.append(hn)
 

@@ -43,8 +43,7 @@ class BaseTTSInfer:
 
     def run_vocoder(self, c):
         c = c.transpose(2, 1)
-        y = self.vocoder(c)[:, 0]
-        return y
+        return self.vocoder(c)[:, 0]
 
     def preprocess_input(self, inp):
         """
@@ -77,7 +76,7 @@ class BaseTTSInfer:
         word_lengths = torch.LongTensor([txt_tokens.shape[1]]).to(self.device)
         ph2word = torch.LongTensor(item['ph2word'])[None, :].to(self.device)
         spk_ids = torch.LongTensor(item['spk_id'])[None, :].to(self.device)
-        batch = {
+        return {
             'item_name': item_names,
             'text': text,
             'ph': ph,
@@ -88,7 +87,6 @@ class BaseTTSInfer:
             'ph2word': ph2word,
             'spk_ids': spk_ids,
         }
-        return batch
 
     def postprocess_output(self, output):
         return output
@@ -117,4 +115,4 @@ class BaseTTSInfer:
         infer_ins = cls(hp)
         out = infer_ins.infer_once(inp)
         os.makedirs('infer_out', exist_ok=True)
-        save_wav(out, f'infer_out/example_out.wav', hp['audio_sample_rate'])
+        save_wav(out, 'infer_out/example_out.wav', hp['audio_sample_rate'])

@@ -90,12 +90,12 @@ class MultiWindowDiscriminator(nn.Module):
             (tensor) : (B, c_in, win_length, n_bins).
 
         '''
-        T_start = 0
         T_end = x_len.max() - win_length
         if T_end < 0:
             return None, None, start_frames
         T_end = T_end.item()
         if start_frames is None:
+            T_start = 0
             start_frame = np.random.randint(low=T_start, high=T_end + 1)
             start_frames = [start_frame] * x.size(0)
         else:

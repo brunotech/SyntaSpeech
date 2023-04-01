@@ -67,7 +67,7 @@ class MultiprocessManager:
             job_id, res = self.results_queue.get()
             yield job_id, res
             self.n_finished += 1
-        for w in range(self.num_workers):
+        for _ in range(self.num_workers):
             self.args_queue.put("<KILL>")
         for w in self.workers:
             w.join()
@@ -83,11 +83,19 @@ class MultiprocessManager:
 
 def multiprocess_run_tqdm(map_func, args, num_workers=None, ordered=True, init_ctx_func=None,
                           multithread=False, queue_max=-1, desc=None):
-    for i, res in tqdm(
-            multiprocess_run(map_func, args, num_workers, ordered, init_ctx_func, multithread,
-                             queue_max=queue_max),
-            total=len(args), desc=desc):
-        yield i, res
+    yield from tqdm(
+        multiprocess_run(
+            map_func,
+            args,
+            num_workers,
+            ordered,
+            init_ctx_func,
+            multithread,
+            queue_max=queue_max,
+        ),
+        total=len(args),
+        desc=desc,
+    )
 
 
 def multiprocess_run(map_func, args, num_workers=None, ordered=True, init_ctx_func=None, multithread=False,
@@ -125,6 +133,5 @@ def multiprocess_run(map_func, args, num_workers=None, ordered=True, init_ctx_fu
                 results[i_now] = None
                 i_now += 1
     else:
-        for job_i, res in manager.get_results():
-            yield job_i, res
+        yield from manager.get_results()
     manager.close()

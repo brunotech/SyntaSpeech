@@ -63,27 +63,26 @@ class FastSpeech2Orig(FastSpeech):
         return ret
 
     def forward_pitch(self, decoder_inp, f0, uv, mel2ph, ret, encoder_out=None):
-        if self.hparams['pitch_type'] == 'cwt':
-            decoder_inp = decoder_inp.detach() + self.hparams['predictor_grad'] * (decoder_inp - decoder_inp.detach())
-            pitch_padding = mel2ph == 0
-            ret['cwt'] = cwt_out = self.pitch_predictor(decoder_inp)
-            stats_out = self.cwt_stats_layers(decoder_inp.mean(1))  # [B, 2]
-            mean = ret['f0_mean'] = stats_out[:, 0]
-            std = ret['f0_std'] = stats_out[:, 1]
-            cwt_spec = cwt_out[:, :, :10]
-            if f0 is None:
-                std = std * self.hparams['cwt_std_scale']
-                f0 = self.cwt2f0_norm(cwt_spec, mean, std, mel2ph)
-                if self.hparams['use_uv']:
-                    assert cwt_out.shape[-1] == 11
-                    uv = cwt_out[:, :, -1] > 0
-            ret['f0_denorm'] = f0_denorm = denorm_f0(f0, uv if self.hparams['use_uv'] else None,
-                                                     pitch_padding=pitch_padding)
-            pitch = f0_to_coarse(f0_denorm)  # start from 0
-            pitch_embed = self.pitch_embed(pitch)
-            return pitch_embed
-        else:
+        if self.hparams['pitch_type'] != 'cwt':
             return super(FastSpeech2Orig, self).forward_pitch(decoder_inp, f0, uv, mel2ph, ret, encoder_out)
+        decoder_inp = decoder_inp.detach() + self.hparams['predictor_grad'] * (decoder_inp - decoder_inp.detach())
+        pitch_padding = mel2ph == 0
+        ret['cwt'] = cwt_out = self.pitch_predictor(decoder_inp)
+        stats_out = self.cwt_stats_layers(decoder_inp.mean(1))  # [B, 2]
+        mean = ret['f0_mean'] = stats_out[:, 0]
+        std = ret['f0_std'] = stats_out[:, 1]
+        cwt_spec = cwt_out[:, :, :10]
+        if f0 is None:
+            std = std * self.hparams['cwt_std_scale']
+            f0 = self.cwt2f0_norm(cwt_spec, mean, std, mel2ph)
+            if self.hparams['use_uv']:
+                assert cwt_out.shape[-1] == 11
+                uv = cwt_out[:, :, -1] > 0
+        ret['f0_denorm'] = f0_denorm = denorm_f0(f0, uv if self.hparams['use_uv'] else None,
+                                                 pitch_padding=pitch_padding)
+        pitch = f0_to_coarse(f0_denorm)  # start from 0
+        pitch_embed = self.pitch_embed(pitch)
+        return pitch_embed
 
     def forward_energy(self, decoder_inp, energy, ret):
         decoder_inp = decoder_inp.detach() + self.hparams['predictor_grad'] * (decoder_inp - decoder_inp.detach())
@@ -98,5 +97,4 @@ class FastSpeech2Orig(FastSpeech):
         f0 = cwt2f0(cwt_spec, mean, std, cwt_scales)
         f0 = torch.cat(
             [f0] + [f0[:, -1:]] * (mel2ph.shape[1] - f0.shape[1]), 1)
-        f0_norm = norm_f0(f0, None)
-        return f0_norm
+        return norm_f0(f0, None)

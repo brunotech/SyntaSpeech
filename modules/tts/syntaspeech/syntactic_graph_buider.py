@@ -70,7 +70,7 @@ class Sentence2GraphParser:
         # start vocab-to-word alignment
         vocab_to_word = {}
         current_word_idx = 1
-        for vocab_i in vocab_nodes.keys():
+        for vocab_i in vocab_nodes:
             vocab_to_word[vocab_i] = []
             for w_in_vocab_i in vocab_nodes[vocab_i]:
                 if w_in_vocab_i != idx_to_word[current_word_idx]:
@@ -128,7 +128,7 @@ class Sentence2GraphParser:
 
         if sequential_edge:
             seq_source, seq_dest = list(range(1, num_vocab)) + list(range(num_vocab, 0, -1)), \
-                                   list(range(2, num_vocab + 1)) + list(range(num_vocab - 1, -1, -1))
+                                       list(range(2, num_vocab + 1)) + list(range(num_vocab - 1, -1, -1))
             vocab_level_source_id += seq_source
             vocab_level_dest_id += seq_dest
             vocab_level_edge_types += [4] * (num_vocab - 1) + [5] * (num_vocab - 1)
@@ -281,11 +281,13 @@ if __name__ == '__main__':
     ph_words = ['<BOS>', 'b_ao3_|', 'm_a3_#', 'p_ei4_|', 'g_ua4_#', 'b_o3_#', 'l_uo2_|', 'an1', ',', 'd_iao1_|',
                 'ch_an2_#', 'van4_#', 'zh_en3_#', 'd_ong3_|', 'ueng1_#', 't_a4', '<EOS>']
     graph1, etypes1 = parser.parse(text1, words, ph_words)
-    plot_dgl_sentence_graph(graph1, {i: w for i, w in enumerate(ph_words)})
+    plot_dgl_sentence_graph(graph1, dict(enumerate(ph_words)))
 
     # Unit Test for English Graph Builder
     parser = Sentence2GraphParser("en")
     text2 = "I love you . You love me . Mixue ice-scream and tea ."
     graph2, etypes2 = parser.parse(text2)
-    plot_dgl_sentence_graph(graph2, {i: w for i, w in enumerate(("<BOS> " + text2 + " <EOS>").split(" "))})
+    plot_dgl_sentence_graph(
+        graph2, dict(enumerate(f"<BOS> {text2} <EOS>".split(" ")))
+    )
     

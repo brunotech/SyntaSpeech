@@ -41,7 +41,7 @@ class VocoderBaseTask(BaseTask):
         if dist.is_initialized():
             world_size = dist.get_world_size()
             rank = dist.get_rank()
-        sampler_cls = DistributedSampler if not endless else EndlessDistributedSampler
+        sampler_cls = EndlessDistributedSampler if endless else DistributedSampler
         train_sampler = sampler_cls(
             dataset=dataset,
             num_replicas=world_size,
@@ -76,13 +76,12 @@ class VocoderBaseTask(BaseTask):
         }
 
     def validation_step(self, sample, batch_idx):
-        outputs = {}
         total_loss, loss_output = self._training_step(sample, batch_idx, 0)
-        outputs['losses'] = tensors_to_scalars(loss_output)
+        outputs = {'losses': tensors_to_scalars(loss_output)}
         outputs['total_loss'] = tensors_to_scalars(total_loss)
 
         if self.global_step % hparams['valid_infer_interval'] == 0 and \
-                batch_idx < 10:
+                    batch_idx < 10:
             mels = sample['mels']
             y = sample['wavs']
             f0 = sample['f0']
@@ -106,11 +105,10 @@ class VocoderBaseTask(BaseTask):
         mels = sample['mels']
         y = sample['wavs']
         f0 = sample['f0']
-        loss_output = {}
         y_ = self.model_gen(mels, f0)
         gen_dir = os.path.join(hparams['work_dir'], f'generated_{self.trainer.global_step}_{hparams["gen_dir_name"]}')
         os.makedirs(gen_dir, exist_ok=True)
-        for idx, (wav_pred, wav_gt, item_name) in enumerate(zip(y_, y, sample["item_name"])):
+        for wav_pred, wav_gt, item_name in zip(y_, y, sample["item_name"]):
             wav_gt = wav_gt.clamp(-1, 1)
             wav_pred = wav_pred.clamp(-1, 1)
             save_wav(
@@ -119,7 +117,7 @@ class VocoderBaseTask(BaseTask):
             save_wav(
                 wav_pred.view(-1).cpu().float().numpy(), f'{gen_dir}/{item_name}_pred.wav',
                 hparams['audio_sample_rate'])
-        return loss_output
+        return {}
 
     def test_end(self, outputs):
         return {}

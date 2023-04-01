@@ -12,10 +12,10 @@ from utils.text.encoding import get_encoding
 def process_item(idx, txt_fn):
     base_fn = os.path.splitext(txt_fn)[0]
     basename = os.path.basename(base_fn)
-    if os.path.exists(base_fn + '.wav'):
-        wav_fn = base_fn + '.wav'
-    elif os.path.exists(base_fn + '.mp3'):
-        wav_fn = base_fn + '.mp3'
+    if os.path.exists(f'{base_fn}.wav'):
+        wav_fn = f'{base_fn}.wav'
+    elif os.path.exists(f'{base_fn}.mp3'):
+        wav_fn = f'{base_fn}.mp3'
     else:
         return
     # process text
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     remove_file(mfa_process_dir, f'{input_dir}/mfa_tmp')
     os.makedirs(mfa_process_dir, exist_ok=True)
     os.makedirs(f'{mfa_process_dir}/processed_tmp', exist_ok=True)
-    for res in multiprocess_run_tqdm(
+    for _ in multiprocess_run_tqdm(
             process_item, list(enumerate(glob.glob(f'{input_dir}/*.txt')))):
         pass
     remove_file(f'{mfa_process_dir}/processed_tmp')

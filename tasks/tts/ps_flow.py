@@ -18,12 +18,16 @@ class PortaSpeechFlowTask(PortaSpeechTask):
 
     def _training_step(self, sample, batch_idx, opt_idx):
         self.training_post_glow = self.global_step >= hparams['post_glow_training_start'] \
-                                  and hparams['use_post_flow']
+                                      and hparams['use_post_flow']
         if hparams['two_stage'] and \
-                ((opt_idx == 0 and self.training_post_glow) or (opt_idx == 1 and not self.training_post_glow)):
+                    ((opt_idx == 0 and self.training_post_glow) or (opt_idx == 1 and not self.training_post_glow)):
             return None
         loss_output, _ = self.run_model(sample)
-        total_loss = sum([v for v in loss_output.values() if isinstance(v, torch.Tensor) and v.requires_grad])
+        total_loss = sum(
+            v
+            for v in loss_output.values()
+            if isinstance(v, torch.Tensor) and v.requires_grad
+        )
         loss_output['batch_size'] = sample['txt_tokens'].size()[0]
         if 'postflow' in loss_output and loss_output['postflow'] is None:
             return None
@@ -71,24 +75,25 @@ class PortaSpeechFlowTask(PortaSpeechTask):
         else:
             use_gt_dur = kwargs.get('infer_use_gt_dur', hparams['use_gt_dur'])
             forward_post_glow = self.global_step >= hparams['post_glow_training_start'] + 1000 \
-                                and hparams['use_post_flow']
+                                    and hparams['use_post_flow']
             spk_embed = sample.get('spk_embed')
             spk_id = sample.get('spk_ids')
-            output = self.model(
+            return self.model(
                 sample['txt_tokens'],
                 sample['word_tokens'],
                 ph2word=sample['ph2word'],
                 word_len=sample['word_lengths'].max(),
                 pitch=sample.get('pitch'),
                 mel2ph=sample['mel2ph'] if use_gt_dur else None,
-                mel2word=sample['mel2word'] if hparams['profile_infer'] or hparams['use_gt_dur'] else None,
+                mel2word=sample['mel2word']
+                if hparams['profile_infer'] or hparams['use_gt_dur']
+                else None,
                 infer=True,
                 forward_post_glow=forward_post_glow,
                 spk_embed=spk_embed,
                 spk_id=spk_id,
-                two_stage=hparams['two_stage']
+                two_stage=hparams['two_stage'],
             )
-            return output
 
     def validation_step(self, sample, batch_idx):
         self.training_post_glow = self.global_step >= hparams['post_glow_training_start'] \
@@ -101,13 +106,11 @@ class PortaSpeechFlowTask(PortaSpeechTask):
         f0_gt = None
         if sample.get('f0') is not None:
             f0_gt = denorm_f0(sample['f0'][0].cpu(), sample['uv'][0].cpu())
-        if self.global_step > 0:
-            # save FVAE result
-            if hparams['use_post_flow']:
-                wav_pred = self.vocoder.spec2wav(model_out['mel_out_fvae'][0].cpu(), f0=f0_gt)
-                self.logger.add_audio(f'wav_fvae_{batch_idx}', wav_pred, self.global_step, sr)
-                self.plot_mel(batch_idx, sample['mels'], model_out['mel_out_fvae'][0],
-                              f'mel_fvae_{batch_idx}', f0s=f0_gt)
+        if self.global_step > 0 and hparams['use_post_flow']:
+            wav_pred = self.vocoder.spec2wav(model_out['mel_out_fvae'][0].cpu(), f0=f0_gt)
+            self.logger.add_audio(f'wav_fvae_{batch_idx}', wav_pred, self.global_step, sr)
+            self.plot_mel(batch_idx, sample['mels'], model_out['mel_out_fvae'][0],
+                          f'mel_fvae_{batch_idx}', f0s=f0_gt)
 
     def build_optimizer(self, model):
         if hparams['two_stage'] and hparams['use_post_flow']:

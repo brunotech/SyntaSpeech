@@ -16,7 +16,7 @@ def griffin_lim(S, hop_size, win_size, fft_size, angles=None, n_iters=30):
     angles = np.exp(2j * np.pi * np.random.rand(*S.shape)) if angles is None else angles
     S_complex = np.abs(S).astype(np.complex)
     y = _istft(S_complex * angles, hop_size, win_size)
-    for i in range(n_iters):
+    for _ in range(n_iters):
         angles = np.exp(1j * np.angle(_stft(y, hop_size, win_size, fft_size)))
         y = _istft(S_complex * angles, hop_size, win_size)
     return y
@@ -31,8 +31,7 @@ def istft(amp, ang, hop_size, win_size, fft_size, pad=False, window=None):
         window = torch.hann_window(win_size).to(amp.device)
     if pad:
         spec = F.pad(spec, [0, 0, 0, 1], mode='reflect')
-    wav = torch.istft(spec, fft_size, hop_size, win_size)
-    return wav
+    return torch.istft(spec, fft_size, hop_size, win_size)
 
 
 def griffin_lim_torch(S, hop_size, win_size, fft_size, angles=None, n_iters=30):
@@ -53,7 +52,7 @@ def griffin_lim_torch(S, hop_size, win_size, fft_size, angles=None, n_iters=30):
     angles = torch.exp(2j * np.pi * torch.rand(*S.shape)) if angles is None else angles
     window = torch.hann_window(win_size).to(S.device)
     y = istft(S, angles, hop_size, win_size, fft_size, window=window)
-    for i in range(n_iters):
+    for _ in range(n_iters):
         x_stft = torch.stft(y, fft_size, hop_size, win_size, window)
         x_stft = x_stft[..., 0] + 1j * x_stft[..., 1]
         angles = torch.angle(x_stft)

@@ -56,7 +56,7 @@ class SyntaSpeechTask(FastSpeechTask):
             #######################
             loss_output, model_out = self.run_model(sample, infer=False)
             self.model_out_gt = self.model_out = \
-                {k: v.detach() for k, v in model_out.items() if isinstance(v, torch.Tensor)}
+                    {k: v.detach() for k, v in model_out.items() if isinstance(v, torch.Tensor)}
             if disc_start:
                 mel_p = model_out['mel_out']
                 if hasattr(self.model, 'out2mel'):
@@ -69,25 +69,25 @@ class SyntaSpeechTask(FastSpeechTask):
                 if pc_ is not None:
                     loss_output['ac'] = self.mse_loss_fn(pc_, pc_.new_ones(pc_.size()))
                     loss_weights['ac'] = hparams['lambda_mel_adv']
-        else:
-            #######################
-            #    Discriminator    #
-            #######################
-            if disc_start and self.global_step % hparams['disc_interval'] == 0:
-                model_out = self.model_out_gt
-                mel_g = sample['mels']
-                mel_p = model_out['mel_out']
-                o = self.mel_disc(mel_g)
-                p, pc = o['y'], o['y_c']
-                o_ = self.mel_disc(mel_p)
-                p_, pc_ = o_['y'], o_['y_c']
-                if p_ is not None:
-                    loss_output["r"] = self.mse_loss_fn(p, p.new_ones(p.size()))
-                    loss_output["f"] = self.mse_loss_fn(p_, p_.new_zeros(p_.size()))
-                if pc_ is not None:
-                    loss_output["rc"] = self.mse_loss_fn(pc, pc.new_ones(pc.size()))
-                    loss_output["fc"] = self.mse_loss_fn(pc_, pc_.new_zeros(pc_.size()))
-        total_loss = sum([loss_weights.get(k, 1) * v for k, v in loss_output.items() if isinstance(v, torch.Tensor) and v.requires_grad])
+        elif disc_start and self.global_step % hparams['disc_interval'] == 0:
+            mel_g = sample['mels']
+            model_out = self.model_out_gt
+            mel_p = model_out['mel_out']
+            o = self.mel_disc(mel_g)
+            p, pc = o['y'], o['y_c']
+            o_ = self.mel_disc(mel_p)
+            p_, pc_ = o_['y'], o_['y_c']
+            if p_ is not None:
+                loss_output["r"] = self.mse_loss_fn(p, p.new_ones(p.size()))
+                loss_output["f"] = self.mse_loss_fn(p_, p_.new_zeros(p_.size()))
+            if pc_ is not None:
+                loss_output["rc"] = self.mse_loss_fn(pc, pc.new_ones(pc.size()))
+                loss_output["fc"] = self.mse_loss_fn(pc_, pc_.new_zeros(pc_.size()))
+        total_loss = sum(
+            loss_weights.get(k, 1) * v
+            for k, v in loss_output.items()
+            if isinstance(v, torch.Tensor) and v.requires_grad
+        )
         loss_output['batch_size'] = sample['txt_tokens'].size()[0]
         return total_loss, loss_output
 
@@ -111,8 +111,7 @@ class SyntaSpeechTask(FastSpeechTask):
                                 graph_lst=sample['graph_lst'], 
                                 etypes_lst=sample['etypes_lst']
                                 )
-            losses = {}
-            losses['kl_v'] = output['kl'].detach()
+            losses = {'kl_v': output['kl'].detach()}
             losses_kl = output['kl']
             losses_kl = torch.clamp(losses_kl, min=hparams['kl_min'])
             losses_kl = min(self.global_step / hparams['kl_start_steps'], 1) * losses_kl
@@ -128,8 +127,9 @@ class SyntaSpeechTask(FastSpeechTask):
             return losses, output
         else:
             use_gt_dur = kwargs.get('infer_use_gt_dur', hparams['use_gt_dur'])
-            output = self.model(
-                txt_tokens, word_tokens,
+            return self.model(
+                txt_tokens,
+                word_tokens,
                 ph2word=sample['ph2word'],
                 word_len=sample['word_lengths'].max(),
                 pitch=sample.get('pitch'),
@@ -139,10 +139,9 @@ class SyntaSpeechTask(FastSpeechTask):
                 infer=True,
                 spk_embed=spk_embed,
                 spk_id=spk_id,
-                graph_lst=sample['graph_lst'], 
-                etypes_lst=sample['etypes_lst']
+                graph_lst=sample['graph_lst'],
+                etypes_lst=sample['etypes_lst'],
             )
-            return output
 
     def add_dur_loss(self, dur_pred, mel2token, word_len, txt_tokens, losses=None):
         T = word_len.max()

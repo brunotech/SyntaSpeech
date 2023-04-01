@@ -40,7 +40,7 @@ def load_data_preprocessor():
     cls_name = preprocess_cls.split(".")[-1]
     preprocessor: BasePreprocessor = getattr(importlib.import_module(pkg), cls_name)()
     preprocess_args = {}
-    preprocess_args.update(hparams['preprocess_args'])
+    preprocess_args |= hparams['preprocess_args']
     return preprocessor, preprocess_args
 
 
@@ -50,5 +50,5 @@ def load_data_binarizer():
     cls_name = binarizer_cls.split(".")[-1]
     binarizer: BaseBinarizer = getattr(importlib.import_module(pkg), cls_name)()
     binarization_args = {}
-    binarization_args.update(hparams['binarization_args'])
+    binarization_args |= hparams['binarization_args']
     return binarizer, binarization_args

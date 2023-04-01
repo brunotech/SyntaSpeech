@@ -43,7 +43,7 @@ class Encoder(nn.Module):
         self.norm_layers_1 = nn.ModuleList()
         self.ffn_layers = nn.ModuleList()
         self.norm_layers_2 = nn.ModuleList()
-        for i in range(self.n_layers):
+        for _ in range(self.n_layers):
             self.attn_layers.append(
                 MultiHeadAttention(hidden_channels, hidden_channels, n_heads, window_size=window_size,
                                    p_dropout=p_dropout, block_length=block_length))
@@ -165,8 +165,7 @@ class MultiHeadAttention(nn.Module):
         y: [h or 1, m, d]
         ret: [b, h, l, d]
         """
-        ret = torch.matmul(x, y.unsqueeze(0))
-        return ret
+        return torch.matmul(x, y.unsqueeze(0))
 
     def _matmul_with_relative_keys(self, x, y):
         """
@@ -174,8 +173,7 @@ class MultiHeadAttention(nn.Module):
         y: [h or 1, m, d]
         ret: [b, h, l, m]
         """
-        ret = torch.matmul(x, y.unsqueeze(0).transpose(-2, -1))
-        return ret
+        return torch.matmul(x, y.unsqueeze(0).transpose(-2, -1))
 
     def _get_relative_embeddings(self, relative_embeddings, length):
         max_relative_position = 2 * self.window_size + 1
@@ -189,8 +187,7 @@ class MultiHeadAttention(nn.Module):
                 convert_pad_shape([[0, 0], [pad_length, pad_length], [0, 0]]))
         else:
             padded_relative_embeddings = relative_embeddings
-        used_relative_embeddings = padded_relative_embeddings[:, slice_start_position:slice_end_position]
-        return used_relative_embeddings
+        return padded_relative_embeddings[:, slice_start_position:slice_end_position]
 
     def _relative_position_to_absolute_position(self, x):
         """
@@ -205,9 +202,9 @@ class MultiHeadAttention(nn.Module):
         x_flat = x.view([batch, heads, length * 2 * length])
         x_flat = F.pad(x_flat, convert_pad_shape([[0, 0], [0, 0], [0, length - 1]]))
 
-        # Reshape and slice out the padded elements.
-        x_final = x_flat.view([batch, heads, length + 1, 2 * length - 1])[:, :, :length, length - 1:]
-        return x_final
+        return x_flat.view([batch, heads, length + 1, 2 * length - 1])[
+            :, :, :length, length - 1 :
+        ]
 
     def _absolute_position_to_relative_position(self, x):
         """
@@ -220,8 +217,7 @@ class MultiHeadAttention(nn.Module):
         x_flat = x.view([batch, heads, length ** 2 + length * (length - 1)])
         # add 0's in the beginning that will skew the elements after reshape
         x_flat = F.pad(x_flat, convert_pad_shape([[0, 0], [0, 0], [length, 0]]))
-        x_final = x_flat.view([batch, heads, length, 2 * length])[:, :, :, 1:]
-        return x_final
+        return x_flat.view([batch, heads, length, 2 * length])[:, :, :, 1:]
 
     def _attention_bias_proximal(self, length):
         """Bias for self-attention to encourage attention to close positions.

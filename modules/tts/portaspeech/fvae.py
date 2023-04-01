@@ -87,10 +87,14 @@ class FVAE(nn.Module):
         if np.prod(strides) == 1:
             self.g_pre_net = nn.Conv1d(c_cond, c_cond, kernel_size=1)
         else:
-            self.g_pre_net = nn.Sequential(*[
-                nn.Conv1d(c_cond, c_cond, kernel_size=s * 2, stride=s, padding=s // 2)
-                for i, s in enumerate(strides)
-            ])
+            self.g_pre_net = nn.Sequential(
+                *[
+                    nn.Conv1d(
+                        c_cond, c_cond, kernel_size=s * 2, stride=s, padding=s // 2
+                    )
+                    for s in strides
+                ]
+            )
         self.encoder = FVAEEncoder(c_in_out, hidden_size, c_latent, kernel_size,
                                    enc_n_layers, c_cond, strides=strides, nn_type=encoder_type)
         if use_prior_flow:
@@ -146,10 +150,14 @@ class SyntaFVAE(nn.Module):
         if np.prod(strides) == 1:
             self.g_pre_net = nn.Conv1d(c_cond, c_cond, kernel_size=1)
         else:
-            self.g_pre_net = nn.Sequential(*[
-                nn.Conv1d(c_cond, c_cond, kernel_size=s * 2, stride=s, padding=s // 2)
-                for i, s in enumerate(strides)
-            ])
+            self.g_pre_net = nn.Sequential(
+                *[
+                    nn.Conv1d(
+                        c_cond, c_cond, kernel_size=s * 2, stride=s, padding=s // 2
+                    )
+                    for s in strides
+                ]
+            )
         self.encoder = FVAEEncoder(c_in_out, hidden_size, c_latent, kernel_size,
                                    enc_n_layers, c_cond, strides=strides, nn_type=encoder_type)
         if use_prior_flow:

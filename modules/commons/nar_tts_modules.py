@@ -102,8 +102,7 @@ class LengthRegulator(torch.nn.Module):
 
         pos_idx = torch.arange(dur.sum(-1).max())[None, None].to(dur.device)
         token_mask = (pos_idx >= dur_cumsum_prev[:, :, None]) & (pos_idx < dur_cumsum[:, :, None])
-        mel2token = (token_idx * token_mask.long()).sum(1)
-        return mel2token
+        return (token_idx * token_mask.long()).sum(1)
 
 
 class PitchPredictor(torch.nn.Module):

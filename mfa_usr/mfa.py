@@ -83,10 +83,12 @@ def fix_path():
     thirdparty_dir = os.path.join(TEMP_DIR, 'thirdparty', 'bin')
     old_path = os.environ.get('PATH', '')
     if sys.platform == 'win32':
-        os.environ['PATH'] = thirdparty_dir + ';' + old_path
+        os.environ['PATH'] = f'{thirdparty_dir};{old_path}'
     else:
-        os.environ['PATH'] = thirdparty_dir + ':' + old_path
-        os.environ['LD_LIBRARY_PATH'] = thirdparty_dir + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+        os.environ['PATH'] = f'{thirdparty_dir}:{old_path}'
+        os.environ['LD_LIBRARY_PATH'] = f'{thirdparty_dir}:' + os.environ.get(
+            'LD_LIBRARY_PATH', ''
+        )
 
 
 def unfix_path():
@@ -478,7 +480,6 @@ def main():
                         d = h['date'].isoformat()
                         print(
                             f"{h['command']}\t{d}\t{execution_time}\t{h['version']}\t{h['exit_code']}\t{h['exception']}")
-                    pass
                 else:
                     for h in history:
                         print(h['command'])

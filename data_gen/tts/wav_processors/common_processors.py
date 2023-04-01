@@ -18,10 +18,9 @@ class ConvertToWavProcessor(BaseWavProcessor):
     def process(self, input_fn, sr, tmp_dir, processed_dir, item_name, preprocess_args):
         if input_fn[-4:] == '.wav':
             return input_fn, sr
-        else:
-            output_fn = self.output_fn(input_fn)
-            subprocess.check_call(f'sox -v 0.95 "{input_fn}" -t wav "{output_fn}"', shell=True)
-            return output_fn, sr
+        output_fn = self.output_fn(input_fn)
+        subprocess.check_call(f'sox -v 0.95 "{input_fn}" -t wav "{output_fn}"', shell=True)
+        return output_fn, sr
 
 
 @register_wav_processors(name='sox_resample')
@@ -33,14 +32,13 @@ class ResampleProcessor(BaseWavProcessor):
     def process(self, input_fn, sr, tmp_dir, processed_dir, item_name, preprocess_args):
         output_fn = self.output_fn(input_fn)
         sr_file = librosa.core.get_samplerate(input_fn)
-        if sr != sr_file:
-            subprocess.check_call(f'sox -v 0.95 "{input_fn}" -r{sr} "{output_fn}"', shell=True)
-            y, _ = librosa.core.load(input_fn, sr=sr)
-            y, _ = librosa.effects.trim(y)
-            save_wav(y, output_fn, sr)
-            return output_fn, sr
-        else:
+        if sr == sr_file:
             return input_fn, sr
+        subprocess.check_call(f'sox -v 0.95 "{input_fn}" -r{sr} "{output_fn}"', shell=True)
+        y, _ = librosa.core.load(input_fn, sr=sr)
+        y, _ = librosa.effects.trim(y)
+        save_wav(y, output_fn, sr)
+        return output_fn, sr
 
 
 @register_wav_processors(name='trim_sil')

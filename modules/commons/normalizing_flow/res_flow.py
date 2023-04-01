@@ -34,7 +34,7 @@ class CouplingLayer(nn.Module):
         x_ = self.pre(x0) * nonpadding
         x_ = self.enc(x_, nonpadding=nonpadding, cond=cond)
         m = self.post(x_)
-        x1 = m + x1 if not reverse else x1 - m
+        x1 = x1 - m if reverse else m + x1
         x = torch.cat([x0, x1], 1)
         return x * nonpadding
 
@@ -50,12 +50,12 @@ class ResFlow(nn.Module):
                  nn_type='wn'):
         super().__init__()
         self.flows = nn.ModuleList()
-        for i in range(n_flow_steps):
+        for _ in range(n_flow_steps):
             self.flows.append(
                 CouplingLayer(c_in, hidden_size, kernel_size, n_flow_layers, c_in_g=c_cond, nn_type=nn_type))
             self.flows.append(FlipLayer())
 
     def forward(self, x, nonpadding, cond=None, reverse=False):
-        for flow in (self.flows if not reverse else reversed(self.flows)):
+        for flow in reversed(self.flows) if reverse else self.flows:
             x = flow(x, nonpadding, cond=cond, reverse=reverse)
         return x

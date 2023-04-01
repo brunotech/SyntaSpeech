@@ -45,8 +45,7 @@ class ConformerLayers(nn.Module):
             if self.save_hidden:
                 self.hiddens.append(x[0])
         x = x[0]
-        x = self.layer_norm(x) * nonpadding_mask.float()[:, :, None]
-        return x
+        return self.layer_norm(x) * nonpadding_mask.float()[:, :, None]
 
 
 class ConformerEncoder(ConformerLayers):

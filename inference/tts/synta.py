@@ -38,7 +38,7 @@ class SyntaSpeechInfer(BaseTTSInfer):
         dgl_graph, etypes = self.syntactic_graph_builder.parse(item['text'], words=item['words'].split(" "), ph_words=item['ph_words'].split(" "))
         dgl_graph = dgl_graph.to(self.device)
         etypes = etypes.to(self.device)
-        batch = {
+        return {
             'item_name': item_names,
             'text': text,
             'ph': ph,
@@ -49,9 +49,8 @@ class SyntaSpeechInfer(BaseTTSInfer):
             'ph2word': ph2word,
             'spk_ids': spk_ids,
             'graph_lst': [dgl_graph],
-            'etypes_lst': [etypes]
+            'etypes_lst': [etypes],
         }
-        return batch
     def forward_model(self, inp):
         sample = self.input_to_batch(inp)
         with torch.no_grad():

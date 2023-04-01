@@ -72,17 +72,23 @@ class MelGANGenerator(torch.nn.Module):
 
         # add initial layer
         layers = []
-        if not use_causal_conv:
-            layers += [
+        layers += (
+            [
+                CausalConv1d(
+                    in_channels,
+                    channels,
+                    kernel_size,
+                    bias=bias,
+                    pad=pad,
+                    pad_params=pad_params,
+                ),
+            ]
+            if use_causal_conv
+            else [
                 getattr(torch.nn, pad)((kernel_size - 1) // 2, **pad_params),
                 torch.nn.Conv1d(in_channels, channels, kernel_size, bias=bias),
             ]
-        else:
-            layers += [
-                CausalConv1d(in_channels, channels, kernel_size,
-                             bias=bias, pad=pad, pad_params=pad_params),
-            ]
-
+        )
         self.use_pitch_embed = use_pitch_embed
         if use_pitch_embed:
             self.pitch_embed = nn.Embedding(300, in_channels, 0)
@@ -91,10 +97,20 @@ class MelGANGenerator(torch.nn.Module):
         for i, upsample_scale in enumerate(upsample_scales):
             # add upsampling layer
             layers += [getattr(torch.nn, nonlinear_activation)(**nonlinear_activation_params)]
-            if not use_causal_conv:
-                layers += [
+            layers += (
+                [
+                    CausalConvTranspose1d(
+                        channels // (2**i),
+                        channels // (2 ** (i + 1)),
+                        upsample_scale * 2,
+                        stride=upsample_scale,
+                        bias=bias,
+                    )
+                ]
+                if use_causal_conv
+                else [
                     torch.nn.ConvTranspose1d(
-                        channels // (2 ** i),
+                        channels // (2**i),
                         channels // (2 ** (i + 1)),
                         upsample_scale * 2,
                         stride=upsample_scale,
@@ -103,17 +119,7 @@ class MelGANGenerator(torch.nn.Module):
                         bias=bias,
                     )
                 ]
-            else:
-                layers += [
-                    CausalConvTranspose1d(
-                        channels // (2 ** i),
-                        channels // (2 ** (i + 1)),
-                        upsample_scale * 2,
-                        stride=upsample_scale,
-                        bias=bias,
-                    )
-                ]
-
+            )
             # add residual stack
             for j in range(stacks):
                 layers += [
@@ -143,16 +149,28 @@ class MelGANGenerator(torch.nn.Module):
         layers = []
         # add final layer
         layers += [getattr(torch.nn, nonlinear_activation)(**nonlinear_activation_params)]
-        if not use_causal_conv:
-            layers += [
+        layers += (
+            [
+                CausalConv1d(
+                    channels // (2 ** (i + 1)),
+                    out_channels,
+                    kernel_size,
+                    bias=bias,
+                    pad=pad,
+                    pad_params=pad_params,
+                ),
+            ]
+            if use_causal_conv
+            else [
                 getattr(torch.nn, pad)((kernel_size - 1) // 2, **pad_params),
-                torch.nn.Conv1d(channels // (2 ** (i + 1)), out_channels, kernel_size, bias=bias),
+                torch.nn.Conv1d(
+                    channels // (2 ** (i + 1)),
+                    out_channels,
+                    kernel_size,
+                    bias=bias,
+                ),
             ]
-        else:
-            layers += [
-                CausalConv1d(channels // (2 ** (i + 1)), out_channels, kernel_size,
-                             bias=bias, pad=pad, pad_params=pad_params),
-            ]
+        )
         if use_final_nonlinear_activation:
             layers += [torch.nn.Tanh()]
 
@@ -200,7 +218,7 @@ class MelGANGenerator(torch.nn.Module):
     def apply_weight_norm(self):
         """Apply weight normalization module from all of the layers."""
         def _apply_weight_norm(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.ConvTranspose1d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.ConvTranspose1d)):
                 torch.nn.utils.weight_norm(m)
                 logging.debug(f"Weight norm is applied to {m}.")
 
@@ -214,7 +232,7 @@ class MelGANGenerator(torch.nn.Module):
 
         """
         def _reset_parameters(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.ConvTranspose1d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.ConvTranspose1d)):
                 m.weight.data.normal_(0.0, 0.02)
                 logging.debug(f"Reset parameters in {m}.")
 
@@ -437,7 +455,7 @@ class MelGANMultiScaleDiscriminator(torch.nn.Module):
     def apply_weight_norm(self):
         """Apply weight normalization module from all of the layers."""
         def _apply_weight_norm(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.ConvTranspose1d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.ConvTranspose1d)):
                 torch.nn.utils.weight_norm(m)
                 logging.debug(f"Weight norm is applied to {m}.")
 
@@ -451,7 +469,7 @@ class MelGANMultiScaleDiscriminator(torch.nn.Module):
 
         """
         def _reset_parameters(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.ConvTranspose1d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.ConvTranspose1d)):
                 m.weight.data.normal_(0.0, 0.02)
                 logging.debug(f"Reset parameters in {m}.")
 

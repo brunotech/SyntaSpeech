@@ -91,8 +91,7 @@ class PortaSpeech(FastSpeech):
 
     def build_embedding(self, dictionary, embed_dim):
         num_embeddings = len(dictionary)
-        emb = Embedding(num_embeddings, embed_dim, self.padding_idx)
-        return emb
+        return Embedding(num_embeddings, embed_dim, self.padding_idx)
 
     def forward(self, txt_tokens, word_tokens, ph2word, word_len, mel2word=None, mel2ph=None,
                 spk_embed=None, spk_id=None, pitch=None, infer=False, tgt_mels=None,
@@ -119,7 +118,7 @@ class PortaSpeech(FastSpeech):
         if self.hparams['dur_level'] == 'word':
             word_encoder_out = 0
             h_ph_gb_word = group_hidden_by_segs(ph_encoder_out, ph2word, word_len)[0]
-            word_encoder_out = word_encoder_out + self.ph2word_encoder(h_ph_gb_word)
+            word_encoder_out += self.ph2word_encoder(h_ph_gb_word)
             if self.hparams['use_word_encoder']:
                 word_encoder_out = word_encoder_out + self.word_encoder(word_tokens)
             mel2word = self.forward_dur(ph_encoder_out, mel2word, ret, ph2word=ph2word, word_len=word_len)

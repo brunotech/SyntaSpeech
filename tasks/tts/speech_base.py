@@ -38,10 +38,11 @@ class SpeechBaseTask(BaseTask):
         self.dataset_cls = BaseSpeechDataset
         self.vocoder = None
         data_dir = hparams['binary_data_dir']
-        if not hparams['use_word_input']:
-            self.token_encoder = build_token_encoder(f'{data_dir}/phone_set.json')
-        else:
-            self.token_encoder = build_token_encoder(f'{data_dir}/word_set.json')
+        self.token_encoder = (
+            build_token_encoder(f'{data_dir}/word_set.json')
+            if hparams['use_word_input']
+            else build_token_encoder(f'{data_dir}/phone_set.json')
+        )
         self.padding_idx = self.token_encoder.pad()
         self.eos_idx = self.token_encoder.eos()
         self.seg_idx = self.token_encoder.seg()
@@ -49,7 +50,7 @@ class SpeechBaseTask(BaseTask):
         self.saving_results_futures = None
         self.mel_losses = parse_mel_losses()
         self.max_tokens, self.max_sentences, \
-        self.max_valid_tokens, self.max_valid_sentences = parse_dataset_configs()
+            self.max_valid_tokens, self.max_valid_sentences = parse_dataset_configs()
 
     ##########################
     # datasets
@@ -175,7 +176,11 @@ class SpeechBaseTask(BaseTask):
     ##########################
     def _training_step(self, sample, batch_idx, _):
         loss_output, _ = self.run_model(sample)
-        total_loss = sum([v for v in loss_output.values() if isinstance(v, torch.Tensor) and v.requires_grad])
+        total_loss = sum(
+            v
+            for v in loss_output.values()
+            if isinstance(v, torch.Tensor) and v.requires_grad
+        )
         loss_output['batch_size'] = sample['txt_tokens'].size()[0]
         return total_loss, loss_output
 
@@ -196,14 +201,13 @@ class SpeechBaseTask(BaseTask):
         self.vocoder = get_vocoder_cls(hparams['vocoder'])()
 
     def validation_step(self, sample, batch_idx):
-        outputs = {}
-        outputs['losses'] = {}
+        outputs = {'losses': {}}
         outputs['losses'], model_out = self.run_model(sample)
         outputs['total_loss'] = sum(outputs['losses'].values())
         outputs['nsamples'] = sample['nsamples']
         outputs = tensors_to_scalars(outputs)
         if self.global_step % hparams['valid_infer_interval'] == 0 \
-                and batch_idx < hparams['num_valid_plots']:
+                    and batch_idx < hparams['num_valid_plots']:
             self.save_valid_result(sample, batch_idx, model_out)
         return outputs
 

@@ -39,8 +39,14 @@ class GradioInfer:
                 })
                 audio_out = audio_out * 32767
                 audio_out = audio_out.astype(np.int16)
-                audio_outs.append(audio_out)
-                audio_outs.append(np.zeros(int(hp['audio_sample_rate'] * 0.3)).astype(np.int16))
+                audio_outs.extend(
+                    (
+                        audio_out,
+                        np.zeros(int(hp['audio_sample_rate'] * 0.3)).astype(
+                            np.int16
+                        ),
+                    )
+                )
                 s = ""
         audio_outs = np.concatenate(audio_outs)
         return hp['audio_sample_rate'], audio_outs

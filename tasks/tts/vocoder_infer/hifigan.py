@@ -27,5 +27,4 @@ class HifiGAN(BaseVocoder):
             c = c.transpose(2, 1)
             with Timer('hifigan', enable=hparams['profile_infer']):
                 y = self.model(c).view(-1)
-        wav_out = y.cpu().numpy()
-        return wav_out
+        return y.cpu().numpy()

@@ -61,9 +61,7 @@ class BaseTask(nn.Module):
     def configure_optimizers(self):
         optm = self.build_optimizer(self.model)
         self.scheduler = self.build_scheduler(optm)
-        if isinstance(optm, (list, tuple)):
-            return optm
-        return [optm]
+        return optm if isinstance(optm, (list, tuple)) else [optm]
 
     def build_tensorboard(self, save_dir, name, **kwargs):
         log_dir = os.path.join(save_dir, name)
@@ -211,7 +209,9 @@ class BaseTask(nn.Module):
             val_check_interval=hparams['val_check_interval'],
             tb_log_interval=hparams['tb_log_interval'],
             max_updates=hparams['max_updates'],
-            num_sanity_val_steps=hparams['num_sanity_val_steps'] if not hparams['validate'] else 10000,
+            num_sanity_val_steps=10000
+            if hparams['validate']
+            else hparams['num_sanity_val_steps'],
             accumulate_grad_batches=hparams['accumulate_grad_batches'],
             print_nan_grads=hparams['print_nan_grads'],
             resume_from_checkpoint=hparams.get('resume_from_checkpoint', 0),
@@ -221,7 +221,7 @@ class BaseTask(nn.Module):
             num_ckpt_keep=hparams['num_ckpt_keep'],
             save_best=hparams['save_best'],
             seed=hparams['seed'],
-            debug=hparams['debug']
+            debug=hparams['debug'],
         )
         if not hparams['infer']:  # train
             trainer.fit(cls)

@@ -7,8 +7,7 @@ def fused_add_tanh_sigmoid_multiply(input_a, input_b, n_channels):
     in_act = input_a + input_b
     t_act = torch.tanh(in_act[:, :n_channels_int, :])
     s_act = torch.sigmoid(in_act[:, n_channels_int:, :])
-    acts = t_act * s_act
-    return acts
+    return t_act * s_act
 
 
 class WN(torch.nn.Module):
@@ -43,11 +42,7 @@ class WN(torch.nn.Module):
             self.in_layers.append(in_layer)
 
             # last one is not necessary
-            if i < n_layers - 1:
-                res_skip_channels = 2 * hidden_size
-            else:
-                res_skip_channels = hidden_size
-
+            res_skip_channels = 2 * hidden_size if i < n_layers - 1 else hidden_size
             res_skip_layer = torch.nn.Conv1d(hidden_size, res_skip_channels, 1)
             res_skip_layer = torch.nn.utils.weight_norm(res_skip_layer, name='weight')
             self.res_skip_layers.append(res_skip_layer)

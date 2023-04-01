@@ -34,9 +34,7 @@ def align_from_distances(distance_matrix, debug=False, return_mindist=False):
         visual[range(len(results)), results] = 1
         plt.matshow(visual)
         plt.show()
-    if return_mindist:
-        return results, dtw[-1, -1]
-    return results
+    return (results, dtw[-1, -1]) if return_mindist else results
 
 
 def get_local_context(input_f, max_window=32, scale_factor=1.):
@@ -48,10 +46,7 @@ def get_local_context(input_f, max_window=32, scale_factor=1.):
 
     for t in range(T):  # travel the time series
         for feat_idx in range(-max_window, max_window):
-            if t + feat_idx < 0 or t + feat_idx >= T:
-                value = 0
-            else:
-                value = input_f[t + feat_idx]
+            value = 0 if t + feat_idx < 0 or t + feat_idx >= T else input_f[t + feat_idx]
             derivative[t][feat_idx + max_window] = value
     return derivative
 
@@ -63,8 +58,7 @@ def cal_localnorm_dist(src, tgt, src_len, tgt_len):
     local_norm_src = (local_src - local_src.mean(-1).unsqueeze(-1))  # / local_src.std(-1).unsqueeze(-1)  # [T1, 32]
     local_norm_tgt = (local_tgt - local_tgt.mean(-1).unsqueeze(-1))  # / local_tgt.std(-1).unsqueeze(-1)  # [T2, 32]
 
-    dists = torch.cdist(local_norm_src[None, :, :], local_norm_tgt[None, :, :])  # [1, T1, T2]
-    return dists
+    return torch.cdist(local_norm_src[None, :, :], local_norm_tgt[None, :, :])
 
 
 ## here is API for one sample

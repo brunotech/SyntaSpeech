@@ -17,9 +17,11 @@ from montreal_forced_aligner.exceptions import ArgumentError
 def load_adapt_config():
     training_config, align_config = train_yaml_to_config('mfa_usr/adapt_config.yaml', require_mono=False)
     training_config.training_configs[0].fmllr_iterations = list(
-        range(0, training_config.training_configs[0].num_iterations))
-    training_config.training_configs[0].realignment_iterations = list(range(0, training_config.training_configs[
-        0].num_iterations))
+        range(training_config.training_configs[0].num_iterations)
+    )
+    training_config.training_configs[0].realignment_iterations = list(
+        range(training_config.training_configs[0].num_iterations)
+    )
     return training_config, align_config
 
 
@@ -32,10 +34,11 @@ class AcousticModel2(AcousticModel):
 def adapt_model(args, unknown_args=None):
     command = 'align'
     all_begin = time.time()
-    if not args.temp_directory:
-        temp_dir = TEMP_DIR
-    else:
-        temp_dir = os.path.expanduser(args.temp_directory)
+    temp_dir = (
+        os.path.expanduser(args.temp_directory)
+        if args.temp_directory
+        else TEMP_DIR
+    )
     corpus_name = os.path.basename(args.corpus_directory)
     if corpus_name == '':
         args.corpus_directory = os.path.dirname(args.corpus_directory)
@@ -56,10 +59,7 @@ def adapt_model(args, unknown_args=None):
     if getattr(args, 'clean', False) and os.path.exists(data_directory):
         print('Cleaning old directory!')
         shutil.rmtree(data_directory, ignore_errors=True)
-    if getattr(args, 'verbose', False):
-        log_level = 'debug'
-    else:
-        log_level = 'info'
+    log_level = 'debug' if getattr(args, 'verbose', False) else 'info'
     logger = setup_logger(command, data_directory, console_level=log_level)
     logger.debug('ALIGN CONFIG:')
     log_config(logger, align_config)
@@ -80,18 +80,25 @@ def adapt_model(args, unknown_args=None):
         if conf['dirty']:
             logger.debug('Previous run ended in an error (maybe ctrl-c?)')
         if conf['type'] != command:
-            logger.debug('Previous run was a different subcommand than {} (was {})'.format(command, conf['type']))
+            logger.debug(
+                f"Previous run was a different subcommand than {command} (was {conf['type']})"
+            )
         if conf['corpus_directory'] != args.corpus_directory:
-            logger.debug('Previous run used source directory '
-                         'path {} (new run: {})'.format(conf['corpus_directory'], args.corpus_directory))
+            logger.debug(
+                f"Previous run used source directory path {conf['corpus_directory']} (new run: {args.corpus_directory})"
+            )
         if conf['version'] != __version__:
-            logger.debug('Previous run was on {} version (new run: {})'.format(conf['version'], __version__))
+            logger.debug(
+                f"Previous run was on {conf['version']} version (new run: {__version__})"
+            )
         if conf['dictionary_path'] != args.dictionary_path:
-            logger.debug('Previous run used dictionary path {} '
-                         '(new run: {})'.format(conf['dictionary_path'], args.dictionary_path))
+            logger.debug(
+                f"Previous run used dictionary path {conf['dictionary_path']} (new run: {args.dictionary_path})"
+            )
         if conf['acoustic_model_path'] != args.acoustic_model_path:
-            logger.debug('Previous run used acoustic model path {} '
-                         '(new run: {})'.format(conf['acoustic_model_path'], args.acoustic_model_path))
+            logger.debug(
+                f"Previous run used acoustic model path {conf['acoustic_model_path']} (new run: {args.acoustic_model_path})"
+            )
 
     os.makedirs(data_directory, exist_ok=True)
     model_directory = os.path.join(data_directory, 'acoustic_models')
@@ -104,9 +111,7 @@ def adapt_model(args, unknown_args=None):
     training_config.update_from_align(align_config)
     logger.debug('ADAPT TRAINING CONFIG:')
     log_config(logger, training_config)
-    audio_dir = None
-    if args.audio_directory:
-        audio_dir = args.audio_directory
+    audio_dir = args.audio_directory or None
     try:
         corpus = AlignableCorpus(args.corpus_directory, data_directory,
                                  speaker_characters=args.speaker_characters,
@@ -142,17 +147,17 @@ def adapt_model(args, unknown_args=None):
         a = TrainableAligner(corpus, dictionary, training_config, align_config,
                              temp_directory=data_directory,
                              debug=getattr(args, 'debug', False), logger=logger, pretrained_aligner=previous)
-        logger.debug('Setup adapter in {} seconds'.format(time.time() - begin))
+        logger.debug(f'Setup adapter in {time.time() - begin} seconds')
         a.verbose = args.verbose
 
         begin = time.time()
         a.train()
-        logger.debug('Performed adaptation in {} seconds'.format(time.time() - begin))
+        logger.debug(f'Performed adaptation in {time.time() - begin} seconds')
 
         begin = time.time()
         a.save(args.output_model_path, root_directory=model_directory)
         a.export_textgrids(args.output_directory)
-        logger.debug('Exported TextGrids in {} seconds'.format(time.time() - begin))
+        logger.debug(f'Exported TextGrids in {time.time() - begin} seconds')
         logger.info('All done!')
 
     except Exception as _:
@@ -168,9 +173,13 @@ def adapt_model(args, unknown_args=None):
 
 def validate_args(args, downloaded_acoustic_models, download_dictionaries):
     if not os.path.exists(args.corpus_directory):
-        raise ArgumentError('Could not find the corpus directory {}.'.format(args.corpus_directory))
+        raise ArgumentError(
+            f'Could not find the corpus directory {args.corpus_directory}.'
+        )
     if not os.path.isdir(args.corpus_directory):
-        raise ArgumentError('The specified corpus directory ({}) is not a directory.'.format(args.corpus_directory))
+        raise ArgumentError(
+            f'The specified corpus directory ({args.corpus_directory}) is not a directory.'
+        )
 
     args.dictionary_path = validate_dictionary_arg(args.dictionary_path, download_dictionaries)
 
@@ -178,12 +187,13 @@ def validate_args(args, downloaded_acoustic_models, download_dictionaries):
         args.acoustic_model_path = get_pretrained_acoustic_path(args.acoustic_model_path.lower())
     elif args.acoustic_model_path.lower().endswith(AcousticModel.extension):
         if not os.path.exists(args.acoustic_model_path):
-            raise ArgumentError('The specified model path does not exist: ' + args.acoustic_model_path)
+            raise ArgumentError(
+                f'The specified model path does not exist: {args.acoustic_model_path}'
+            )
     else:
         raise ArgumentError(
-            'The language \'{}\' is not currently included in the distribution, '
-            'please align via training or specify one of the following language names: {}.'.format(
-                args.acoustic_model_path.lower(), ', '.join(downloaded_acoustic_models)))
+            f"The language \'{args.acoustic_model_path.lower()}\' is not currently included in the distribution, please align via training or specify one of the following language names: {', '.join(downloaded_acoustic_models)}."
+        )
 
 
 def run_adapt_model(args, unknown_args=None, downloaded_acoustic_models=None, download_dictionaries=None):

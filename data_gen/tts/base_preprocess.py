@@ -156,22 +156,20 @@ class BasePreprocessor:
     @staticmethod
     def process_wav(item_name, wav_fn, processed_dir, wav_processed_tmp, preprocess_args):
         processors = [get_wav_processor_cls(v) for v in preprocess_args['wav_processors']]
-        processors = [k() for k in processors if k is not None]
-        if len(processors) >= 1:
-            sr_file = librosa.core.get_samplerate(wav_fn)
-            output_fn_for_align = None
-            ext = os.path.splitext(wav_fn)[1]
-            input_fn = f"{wav_processed_tmp}/{item_name}{ext}"
-            link_file(wav_fn, input_fn)
-            for p in processors:
-                outputs = p.process(input_fn, sr_file, wav_processed_tmp, processed_dir, item_name, preprocess_args)
-                if len(outputs) == 3:
-                    input_fn, sr, output_fn_for_align = outputs
-                else:
-                    input_fn, sr = outputs
-            return input_fn, output_fn_for_align
-        else:
+        if not (processors := [k() for k in processors if k is not None]):
             return wav_fn, wav_fn
+        sr_file = librosa.core.get_samplerate(wav_fn)
+        output_fn_for_align = None
+        ext = os.path.splitext(wav_fn)[1]
+        input_fn = f"{wav_processed_tmp}/{item_name}{ext}"
+        link_file(wav_fn, input_fn)
+        for p in processors:
+            outputs = p.process(input_fn, sr_file, wav_processed_tmp, processed_dir, item_name, preprocess_args)
+            if len(outputs) == 3:
+                input_fn, sr, output_fn_for_align = outputs
+            else:
+                input_fn, sr = outputs
+        return input_fn, output_fn_for_align
 
     def _phone_encoder(self, ph_set):
         ph_set_fn = f"{self.processed_dir}/phone_set.json"
@@ -190,7 +188,7 @@ class BasePreprocessor:
             word_set = Counter(word_set)
             total_words = sum(word_set.values())
             word_set = word_set.most_common(hparams['word_dict_size'])
-            num_unk_words = total_words - sum([x[1] for x in word_set])
+            num_unk_words = total_words - sum(x[1] for x in word_set)
             word_set = ['<BOS>', '<EOS>'] + [x[0] for x in word_set]
             word_set = sorted(set(word_set))
             json.dump(word_set, open(word_set_fn, 'w'), ensure_ascii=False)
@@ -210,7 +208,7 @@ class BasePreprocessor:
 
     def build_spk_map(self, spk_names):
         spk_map = {x: i for i, x in enumerate(sorted(list(spk_names)))}
-        assert len(spk_map) == 0 or len(spk_map) <= hparams['num_spk'], len(spk_map)
+        assert not spk_map or len(spk_map) <= hparams['num_spk'], len(spk_map)
         print(f"| Number of spks: {len(spk_map)}, spk_map: {spk_map}")
         json.dump(spk_map, open(self.spk_map_fn, 'w'), ensure_ascii=False)
         return spk_map
@@ -234,8 +232,7 @@ class BasePreprocessor:
 
     def load_spk_map(self, base_dir):
         spk_map_fn = f"{base_dir}/spk_map.json"
-        spk_map = json.load(open(spk_map_fn, 'r'))
-        return spk_map
+        return json.load(open(spk_map_fn, 'r'))
 
     def load_dict(self, base_dir):
         ph_encoder = build_token_encoder(f'{base_dir}/phone_set.json')

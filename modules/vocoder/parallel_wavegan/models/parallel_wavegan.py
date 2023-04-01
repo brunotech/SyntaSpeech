@@ -203,7 +203,7 @@ class ParallelWaveGANGenerator(torch.nn.Module):
     def apply_weight_norm(self):
         """Apply weight normalization module from all of the layers."""
         def _apply_weight_norm(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.Conv2d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d)):
                 torch.nn.utils.weight_norm(m)
                 logging.debug(f"Weight norm is applied to {m}.")
 
@@ -309,7 +309,7 @@ class ParallelWaveGANDiscriminator(torch.nn.Module):
     def apply_weight_norm(self):
         """Apply weight normalization module from all of the layers."""
         def _apply_weight_norm(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.Conv2d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d)):
                 torch.nn.utils.weight_norm(m)
                 logging.debug(f"Weight norm is applied to {m}.")
 
@@ -443,7 +443,7 @@ class ResidualParallelWaveGANDiscriminator(torch.nn.Module):
     def apply_weight_norm(self):
         """Apply weight normalization module from all of the layers."""
         def _apply_weight_norm(m):
-            if isinstance(m, torch.nn.Conv1d) or isinstance(m, torch.nn.Conv2d):
+            if isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d)):
                 torch.nn.utils.weight_norm(m)
                 logging.debug(f"Weight norm is applied to {m}.")
 

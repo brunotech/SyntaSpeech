@@ -192,8 +192,12 @@ class Trainer:
     # valid and test
     ####################
     def run_evaluation(self, test=False):
-        eval_results = self.evaluate(self.task, test, tqdm_desc='Valid' if not test else 'test',
-                                     max_batches=hparams['eval_max_batches'])
+        eval_results = self.evaluate(
+            self.task,
+            test,
+            tqdm_desc='test' if test else 'Valid',
+            max_batches=hparams['eval_max_batches'],
+        )
         if eval_results is not None and 'tb_log' in eval_results:
             tb_log_output = eval_results['tb_log']
             self.log_metrics_to_tb(tb_log_output)
@@ -234,10 +238,7 @@ class Trainer:
             if self.use_ddp:
                 output = task(*args)
             else:
-                if test:
-                    output = task_ref.test_step(*args)
-                else:
-                    output = task_ref.validation_step(*args)
+                output = task_ref.test_step(*args) if test else task_ref.validation_step(*args)
             # track outputs for collation
             outputs.append(output)
         # give model a chance to do something with the outputs (and method defined)
@@ -326,10 +327,7 @@ class Trainer:
                 if self.on_gpu:
                     batch = move_to_cuda(copy.copy(batch), self.root_gpu)
                 args = [batch, batch_idx, opt_idx]
-                if self.use_ddp:
-                    output = self.task(*args)
-                else:
-                    output = task_ref.training_step(*args)
+                output = self.task(*args) if self.use_ddp else task_ref.training_step(*args)
                 loss = output['loss']
                 if loss is None:
                     continue
@@ -338,7 +336,6 @@ class Trainer:
                 # accumulate loss
                 loss = loss / self.accumulate_grad_batches
 
-            # backward pass
             if loss.requires_grad:
                 if self.amp:
                     self.amp_scalar.scale(loss).backward()
@@ -425,8 +422,7 @@ class Trainer:
         except Exception as e:
             print(e)
             return
-        did_restore = True
-        return did_restore
+        return True
 
     def save_checkpoint(self, epoch, logs=None):
         monitor_op = np.less
@@ -439,30 +435,32 @@ class Trainer:
         current = None
         if logs is not None and self.monitor_key in logs:
             current = logs[self.monitor_key]
-        if current is not None and self.save_best:
-            if monitor_op(current, self.best_val_results):
-                best_filepath = f'{self.work_dir}/model_ckpt_best.pt'
-                self.best_val_results = current
-                logging.info(
-                    f'Epoch {epoch:05d}@{self.global_step}: {self.monitor_key} reached {current:0.5f}. '
-                    f'Saving model to {best_filepath}')
-                self._atomic_save(best_filepath)
+        if (
+            current is not None
+            and self.save_best
+            and monitor_op(current, self.best_val_results)
+        ):
+            best_filepath = f'{self.work_dir}/model_ckpt_best.pt'
+            self.best_val_results = current
+            logging.info(
+                f'Epoch {epoch:05d}@{self.global_step}: {self.monitor_key} reached {current:0.5f}. '
+                f'Saving model to {best_filepath}')
+            self._atomic_save(best_filepath)
 
     def _atomic_save(self, filepath):
         checkpoint = self.dump_checkpoint()
-        tmp_path = str(filepath) + ".part"
+        tmp_path = f"{str(filepath)}.part"
         torch.save(checkpoint, tmp_path, _use_new_zipfile_serialization=False)
         os.replace(tmp_path, filepath)
 
     def dump_checkpoint(self):
         checkpoint = {'epoch': self.current_epoch, 'global_step': self.global_step,
                       'checkpoint_callback_best': self.best_val_results}
-        # save optimizers
-        optimizer_states = []
-        for i, optimizer in enumerate(self.optimizers):
-            if optimizer is not None:
-                optimizer_states.append(optimizer.state_dict())
-
+        optimizer_states = [
+            optimizer.state_dict()
+            for optimizer in self.optimizers
+            if optimizer is not None
+        ]
         checkpoint['optimizer_states'] = optimizer_states
         task_ref = self.get_task_ref()
         checkpoint['state_dict'] = {

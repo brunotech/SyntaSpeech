@@ -33,18 +33,17 @@ def load_ckpt(cur_model, ckpt_base_dir, model_name='model', force=True, strict=T
         checkpoint, ckpt_path = get_last_checkpoint(ckpt_base_dir)
     if checkpoint is not None:
         state_dict = checkpoint["state_dict"]
-        if len([k for k in state_dict.keys() if '.' in k]) > 0:
+        if [k for k in state_dict.keys() if '.' in k]:
             state_dict = {k[len(model_name) + 1:]: v for k, v in state_dict.items()
                           if k.startswith(f'{model_name}.')}
+        elif '.' in model_name:
+            base_model_name = model_name.split('.')[0]
+            rest_model_name = model_name[len(base_model_name) + 1:]
+            state_dict = {
+                k[len(rest_model_name) + 1:]: v for k, v in state_dict[base_model_name].items()
+                if k.startswith(f'{rest_model_name}.')}
         else:
-            if '.' not in model_name:
-                state_dict = state_dict[model_name]
-            else:
-                base_model_name = model_name.split('.')[0]
-                rest_model_name = model_name[len(base_model_name) + 1:]
-                state_dict = {
-                    k[len(rest_model_name) + 1:]: v for k, v in state_dict[base_model_name].items()
-                    if k.startswith(f'{rest_model_name}.')}
+            state_dict = state_dict[model_name]
         if not strict:
             cur_model_state_dict = cur_model.state_dict()
             unmatched_keys = []

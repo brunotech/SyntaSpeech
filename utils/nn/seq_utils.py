@@ -49,7 +49,7 @@ def _get_full_incremental_state_key(module_instance, key):
         INCREMENTAL_STATE_INSTANCE_ID[module_name] += 1
         module_instance._instance_id = INCREMENTAL_STATE_INSTANCE_ID[module_name]
 
-    return '{}.{}.{}'.format(module_name, module_instance._instance_id, key)
+    return f'{module_name}.{module_instance._instance_id}.{key}'
 
 
 def get_incremental_state(module, incremental_state, key):
@@ -173,16 +173,12 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
     """
     if length_dim == 0:
-        raise ValueError("length_dim cannot be 0: {}".format(length_dim))
+        raise ValueError(f"length_dim cannot be 0: {length_dim}")
 
     if not isinstance(lengths, list):
         lengths = lengths.tolist()
-    bs = int(len(lengths))
-    if xs is None:
-        maxlen = int(max(lengths))
-    else:
-        maxlen = xs.size(length_dim)
-
+    bs = len(lengths)
+    maxlen = int(max(lengths)) if xs is None else xs.size(length_dim)
     seq_range = torch.arange(0, maxlen, dtype=torch.int64)
     seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
     seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
@@ -284,8 +280,7 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
     ids = torch.arange(0, max_len).to(lengths.device)
-    mask = (ids < lengths.unsqueeze(1)).bool()
-    return mask
+    return (ids < lengths.unsqueeze(1)).bool()
 
 
 def group_hidden_by_segs(h, seg_ids, max_len):

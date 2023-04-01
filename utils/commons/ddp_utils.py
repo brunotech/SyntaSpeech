@@ -33,17 +33,14 @@ class DDP(DistributedDataParallel):
                     self.reducer.prepare_for_backward([])
         else:
             from torch.nn.parallel.distributed import \
-                logging, Join, _DDPSink, _tree_flatten_with_rref, _tree_unflatten_with_rref
+                    logging, Join, _DDPSink, _tree_flatten_with_rref, _tree_unflatten_with_rref
             with torch.autograd.profiler.record_function("DistributedDataParallel.forward"):
                 if torch.is_grad_enabled() and self.require_backward_grad_sync:
                     self.logger.set_runtime_stats_and_log()
                     self.num_iterations += 1
                     self.reducer.prepare_for_forward()
 
-                # Notify the join context that this process has not joined, if
-                # needed
-                work = Join.notify_join_context(self)
-                if work:
+                if work := Join.notify_join_context(self):
                     self.reducer._set_forward_pass_work_handle(
                         work, self._divide_by_initial_world_size
                     )

@@ -154,7 +154,7 @@ class MultiheadAttention(nn.Module):
         self.encoder_decoder_attention = encoder_decoder_attention
 
         assert not self.self_attention or self.qkv_same_dim, 'Self-attention requires query, key and ' \
-                                                             'value to be of the same size'
+                                                                 'value to be of the same size'
 
         if self.qkv_same_dim:
             self.in_proj_weight = Parameter(torch.Tensor(3 * embed_dim, embed_dim))
@@ -181,10 +181,7 @@ class MultiheadAttention(nn.Module):
         self.reset_parameters()
 
         self.enable_torch_version = False
-        if hasattr(F, "multi_head_attention_forward"):
-            self.enable_torch_version = True
-        else:
-            self.enable_torch_version = False
+        self.enable_torch_version = bool(hasattr(F, "multi_head_attention_forward"))
         self.last_attn_probs = None
 
     def reset_parameters(self):
@@ -265,12 +262,9 @@ class MultiheadAttention(nn.Module):
 
         if incremental_state is not None:
             saved_state = self._get_input_buffer(incremental_state)
-            if 'prev_key' in saved_state:
-                # previous time steps are cached - no need to recompute
-                # key and value if they are static
-                if static_kv:
-                    assert self.encoder_decoder_attention and not self.self_attention
-                    key = value = None
+            if 'prev_key' in saved_state and static_kv:
+                assert self.encoder_decoder_attention and not self.self_attention
+                key = value = None
         else:
             saved_state = None
 
@@ -313,16 +307,10 @@ class MultiheadAttention(nn.Module):
             # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
             if 'prev_key' in saved_state:
                 prev_key = saved_state['prev_key'].view(bsz * self.num_heads, -1, self.head_dim)
-                if static_kv:
-                    k = prev_key
-                else:
-                    k = torch.cat((prev_key, k), dim=1)
+                k = prev_key if static_kv else torch.cat((prev_key, k), dim=1)
             if 'prev_value' in saved_state:
                 prev_value = saved_state['prev_value'].view(bsz * self.num_heads, -1, self.head_dim)
-                if static_kv:
-                    v = prev_value
-                else:
-                    v = torch.cat((prev_value, v), dim=1)
+                v = prev_value if static_kv else torch.cat((prev_value, v), dim=1)
             if 'prev_key_padding_mask' in saved_state and saved_state['prev_key_padding_mask'] is not None:
                 prev_key_padding_mask = saved_state['prev_key_padding_mask']
                 if static_kv:
@@ -423,31 +411,28 @@ class MultiheadAttention(nn.Module):
     def in_proj_q(self, query):
         if self.qkv_same_dim:
             return self._in_proj(query, end=self.embed_dim)
-        else:
-            bias = self.in_proj_bias
-            if bias is not None:
-                bias = bias[:self.embed_dim]
-            return F.linear(query, self.q_proj_weight, bias)
+        bias = self.in_proj_bias
+        if bias is not None:
+            bias = bias[:self.embed_dim]
+        return F.linear(query, self.q_proj_weight, bias)
 
     def in_proj_k(self, key):
         if self.qkv_same_dim:
             return self._in_proj(key, start=self.embed_dim, end=2 * self.embed_dim)
-        else:
-            weight = self.k_proj_weight
-            bias = self.in_proj_bias
-            if bias is not None:
-                bias = bias[self.embed_dim:2 * self.embed_dim]
-            return F.linear(key, weight, bias)
+        weight = self.k_proj_weight
+        bias = self.in_proj_bias
+        if bias is not None:
+            bias = bias[self.embed_dim:2 * self.embed_dim]
+        return F.linear(key, weight, bias)
 
     def in_proj_v(self, value):
         if self.qkv_same_dim:
             return self._in_proj(value, start=2 * self.embed_dim)
-        else:
-            weight = self.v_proj_weight
-            bias = self.in_proj_bias
-            if bias is not None:
-                bias = bias[2 * self.embed_dim:]
-            return F.linear(value, weight, bias)
+        weight = self.v_proj_weight
+        bias = self.in_proj_bias
+        if bias is not None:
+            bias = bias[2 * self.embed_dim:]
+        return F.linear(value, weight, bias)
 
     def _in_proj(self, input, start=0, end=None):
         weight = self.in_proj_weight
@@ -501,7 +486,7 @@ class EncSALayer(nn.Module):
             c, 4 * c, kernel_size=kernel_size, dropout=relu_dropout, padding=padding, act=act)
 
     def forward(self, x, encoder_padding_mask=None, **kwargs):
-        layer_norm_training = kwargs.get('layer_norm_training', None)
+        layer_norm_training = kwargs.get('layer_norm_training')
         if layer_norm_training is not None:
             self.layer_norm1.training = layer_norm_training
             self.layer_norm2.training = layer_norm_training
@@ -557,7 +542,7 @@ class DecSALayer(nn.Module):
             reset_attn_weight=None,
             **kwargs,
     ):
-        layer_norm_training = kwargs.get('layer_norm_training', None)
+        layer_norm_training = kwargs.get('layer_norm_training')
         if layer_norm_training is not None:
             self.layer_norm1.training = layer_norm_training
             self.layer_norm2.training = layer_norm_training
@@ -673,10 +658,7 @@ class FFTBlocks(nn.Module):
                                     kernel_size=ffn_kernel_size, num_heads=num_heads)
             for _ in range(self.num_layers)
         ])
-        if self.use_last_norm:
-            self.layer_norm = nn.LayerNorm(embed_dim)
-        else:
-            self.layer_norm = None
+        self.layer_norm = nn.LayerNorm(embed_dim) if self.use_last_norm else None
 
     def forward(self, x, padding_mask=None, attn_mask=None, return_hiddens=False):
         """

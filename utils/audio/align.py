@@ -63,8 +63,12 @@ def split_audio_by_mel2ph(audio, mel2ph, hop_size, audio_num_mel_bins):
 
     new_audio = []
     for i in range(len(split_locs) - 1):
-        new_audio.append(audio[split_locs[i]:split_locs[i + 1]])
-        new_audio.append(np.zeros([0.5 * audio_num_mel_bins]))
+        new_audio.extend(
+            (
+                audio[split_locs[i] : split_locs[i + 1]],
+                np.zeros([0.5 * audio_num_mel_bins]),
+            )
+        )
     return np.concatenate(new_audio)
 
 

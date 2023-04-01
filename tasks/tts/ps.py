@@ -51,8 +51,7 @@ class PortaSpeechTask(FastSpeechTask):
                                 spk_id=spk_id,
                                 infer=False,
                                 global_step=self.global_step)
-            losses = {}
-            losses['kl_v'] = output['kl'].detach()
+            losses = {'kl_v': output['kl'].detach()}
             losses_kl = output['kl']
             losses_kl = torch.clamp(losses_kl, min=hparams['kl_min'])
             losses_kl = min(self.global_step / hparams['kl_start_steps'], 1) * losses_kl
@@ -68,8 +67,9 @@ class PortaSpeechTask(FastSpeechTask):
             return losses, output
         else:
             use_gt_dur = kwargs.get('infer_use_gt_dur', hparams['use_gt_dur'])
-            output = self.model(
-                txt_tokens, word_tokens,
+            return self.model(
+                txt_tokens,
+                word_tokens,
                 ph2word=sample['ph2word'],
                 word_len=sample['word_lengths'].max(),
                 pitch=sample.get('pitch'),
@@ -80,7 +80,6 @@ class PortaSpeechTask(FastSpeechTask):
                 spk_embed=spk_embed,
                 spk_id=spk_id,
             )
-            return output
 
     def add_dur_loss(self, dur_pred, mel2token, word_len, txt_tokens, losses=None):
         T = word_len.max()

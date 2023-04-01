@@ -42,13 +42,18 @@ class ResidualBlock(nn.Module):
         self.blocks = [
             nn.Sequential(
                 norm_builder(),
-                nn.Conv1d(channels, c_multiple * channels, kernel_size, dilation=dilation,
-                          padding=(dilation * (kernel_size - 1)) // 2),
-                LambdaLayer(lambda x: x * kernel_size ** -0.5),
+                nn.Conv1d(
+                    channels,
+                    c_multiple * channels,
+                    kernel_size,
+                    dilation=dilation,
+                    padding=(dilation * (kernel_size - 1)) // 2,
+                ),
+                LambdaLayer(lambda x: x * kernel_size**-0.5),
                 nn.GELU(),
                 nn.Conv1d(c_multiple * channels, channels, 1, dilation=dilation),
             )
-            for i in range(n)
+            for _ in range(n)
         ]
 
         self.blocks = nn.ModuleList(self.blocks)

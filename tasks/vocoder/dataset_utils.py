@@ -54,26 +54,24 @@ class VocoderDataset(BaseDataset):
         self.sizes = np.load(f'{self.data_dir}/{self.prefix}_lengths.npy')
         self.avail_idxs = [idx for idx, s in enumerate(self.sizes) if s > self.batch_max_frames]
         print(f"| {len(self.sizes) - len(self.avail_idxs)} short items are skipped in {prefix} set.")
-        self.sizes = [s for idx, s in enumerate(self.sizes) if s > self.batch_max_frames]
+        self.sizes = [s for s in self.sizes if s > self.batch_max_frames]
 
     def _get_item(self, index):
         if self.indexed_ds is None:
             self.indexed_ds = IndexedDataset(f'{self.data_dir}/{self.prefix}')
-        item = self.indexed_ds[index]
-        return item
+        return self.indexed_ds[index]
 
     def __getitem__(self, index):
         index = self.avail_idxs[index]
         item = self._get_item(index)
-        sample = {
+        return {
             "id": index,
             "item_name": item['item_name'],
             "mel": torch.FloatTensor(item['mel']),
             "wav": torch.FloatTensor(item['wav'].astype(np.float32)),
             "pitch": torch.LongTensor(item['pitch']),
-            "f0": torch.FloatTensor(item['f0'])
+            "f0": torch.FloatTensor(item['f0']),
         }
-        return sample
 
     def collater(self, batch):
         if len(batch) == 0:

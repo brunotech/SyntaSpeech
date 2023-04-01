@@ -117,30 +117,12 @@ def _traceback(D):
 if __name__ == '__main__':
     w = inf
     s = 1.0
-    if 1:  # 1-D numeric
-        from sklearn.metrics.pairwise import manhattan_distances
+    from sklearn.metrics.pairwise import manhattan_distances
 
-        x = [0, 0, 1, 1, 2, 4, 2, 1, 2, 0]
-        y = [1, 1, 1, 2, 2, 2, 2, 3, 2, 0]
-        dist_fun = manhattan_distances
-        w = 1
-        # s = 1.2
-    elif 0:  # 2-D numeric
-        from sklearn.metrics.pairwise import euclidean_distances
-
-        x = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [4, 3], [2, 3], [1, 1], [2, 2], [0, 1]]
-        y = [[1, 0], [1, 1], [1, 1], [2, 1], [4, 3], [4, 3], [2, 3], [3, 1], [1, 2], [1, 0]]
-        dist_fun = euclidean_distances
-    else:  # 1-D list of strings
-        from nltk.metrics.distance import edit_distance
-
-        # x = ['we', 'shelled', 'clams', 'for', 'the', 'chowder']
-        # y = ['class', 'too']
-        x = ['i', 'soon', 'found', 'myself', 'muttering', 'to', 'the', 'walls']
-        y = ['see', 'drown', 'himself']
-        # x = 'we talked about the situation'.split()
-        # y = 'we talked about the situation'.split()
-        dist_fun = edit_distance
+    x = [0, 0, 1, 1, 2, 4, 2, 1, 2, 0]
+    y = [1, 1, 1, 2, 2, 2, 2, 3, 2, 0]
+    dist_fun = manhattan_distances
+    w = 1
     dist, cost, acc, path = dtw(x, y, dist_fun, w=w, s=s)
 
     # Vizualize
@@ -154,7 +136,7 @@ if __name__ == '__main__':
     plt.ylabel('y')
     plt.axis('tight')
     if isinf(w):
-        plt.title('Minimum distance: {}, slope weight: {}'.format(dist, s))
+        plt.title(f'Minimum distance: {dist}, slope weight: {s}')
     else:
-        plt.title('Minimum distance: {}, window widht: {}, slope weight: {}'.format(dist, w, s))
+        plt.title(f'Minimum distance: {dist}, window widht: {w}, slope weight: {s}')
     plt.show()

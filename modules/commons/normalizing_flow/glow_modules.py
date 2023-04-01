@@ -195,8 +195,7 @@ class InvConv(nn.Module):
             weight, dlogdet = self.get_weight(x.device, reverse)
             z = F.conv1d(x, weight)
             if logdet is not None:
-                logdet = logdet + dlogdet * x_len
-            return z, logdet
+                logdet += dlogdet * x_len
         else:
             if self.weight is None:
                 weight, dlogdet = self.get_weight(x.device, reverse)
@@ -204,8 +203,9 @@ class InvConv(nn.Module):
                 weight, dlogdet = self.weight, self.dlogdet
             z = F.conv1d(x, weight)
             if logdet is not None:
-                logdet = logdet - dlogdet * x_len
-            return z, logdet
+                logdet -= dlogdet * x_len
+
+        return z, logdet
 
     def store_inverse(self):
         self.weight, self.dlogdet = self.get_weight('cuda', reverse=True)
@@ -307,10 +307,9 @@ class Glow(nn.Module):
                 self.flows.append(InvConvNear(channels=in_channels * n_sqz, n_split=n_split, n_sqz=n_sqz))
             if inv_conv_type == 'invconv':
                 self.flows.append(InvConv(channels=in_channels * n_sqz))
-            if share_wn_layers > 0:
-                if b % share_wn_layers == 0:
-                    wn = WN(hidden_channels, kernel_size, dilation_rate, n_layers, gin_channels * n_sqz,
-                            p_dropout, share_cond_layers)
+            if share_wn_layers > 0 and b % share_wn_layers == 0:
+                wn = WN(hidden_channels, kernel_size, dilation_rate, n_layers, gin_channels * n_sqz,
+                        p_dropout, share_cond_layers)
             self.flows.append(
                 CouplingBlock(
                     in_channels * n_sqz,
@@ -326,10 +325,7 @@ class Glow(nn.Module):
 
     def forward(self, x, x_mask=None, g=None, reverse=False, return_hiddens=False):
         logdet_tot = 0
-        if not reverse:
-            flows = self.flows
-        else:
-            flows = reversed(self.flows)
+        flows = reversed(self.flows) if reverse else self.flows
         if return_hiddens:
             hs = []
         if self.n_sqz > 1:
@@ -346,9 +342,7 @@ class Glow(nn.Module):
             logdet_tot += logdet
         if self.n_sqz > 1:
             x, x_mask = utils.unsqueeze(x, x_mask, self.n_sqz)
-        if return_hiddens:
-            return x, logdet_tot, hs
-        return x, logdet_tot
+        return (x, logdet_tot, hs) if return_hiddens else (x, logdet_tot)
 
     def store_inverse(self):
         def remove_weight_norm(m):

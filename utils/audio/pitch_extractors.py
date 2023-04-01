@@ -36,5 +36,8 @@ def parselmouth_pitch(wav_data, hop_size, audio_sample_rate, f0_min, f0_max,
         time_step=time_step / 1000, voicing_threshold=voicing_threshold,
         pitch_floor=f0_min, pitch_ceiling=f0_max).selected_array['frequency']
     pad_size = (n_mel_frames - len(f0_pm) + 1) // 2
-    f0 = np.pad(f0_pm, [[pad_size, n_mel_frames - len(f0_pm) - pad_size]], mode='constant')
-    return f0
+    return np.pad(
+        f0_pm,
+        [[pad_size, n_mel_frames - len(f0_pm) - pad_size]],
+        mode='constant',
+    )

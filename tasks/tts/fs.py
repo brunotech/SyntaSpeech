@@ -48,9 +48,15 @@ class FastSpeechTask(SpeechBaseTask):
             if use_gt_f0:
                 f0 = sample['f0']
                 uv = sample['uv']
-            output = self.model(txt_tokens, mel2ph=mel2ph, spk_embed=spk_embed, spk_id=spk_id,
-                                f0=f0, uv=uv, infer=True)
-            return output
+            return self.model(
+                txt_tokens,
+                mel2ph=mel2ph,
+                spk_embed=spk_embed,
+                spk_id=spk_id,
+                f0=f0,
+                uv=uv,
+                infer=True,
+            )
 
     def add_dur_loss(self, dur_pred, mel2ph, txt_tokens, losses=None):
         """

@@ -124,12 +124,15 @@ class BaseBinarizer:
         ph_lengths = []
         mel_lengths = []
         total_sec = 0
-        items = []
         args = [{'item': item} for item in meta_data]
 
-        for item_id, item in multiprocess_run_tqdm(process_item, args, desc='Processing data'):
-            if item is not None:
-                items.append(item)
+        items = [
+            item
+            for item_id, item in multiprocess_run_tqdm(
+                process_item, args, desc='Processing data'
+            )
+            if item is not None
+        ]
         if self.binarization_args['with_spk_embed']:
             args = [{'wav': item['wav']} for item in items]
             for item_id, spk_embed in multiprocess_run_tqdm(
@@ -149,7 +152,7 @@ class BaseBinarizer:
             total_sec += item['sec']
         builder.finalize()
         np.save(f'{data_dir}/{prefix}_lengths.npy', mel_lengths)
-        if len(ph_lengths) > 0:
+        if ph_lengths:
             np.save(f'{data_dir}/{prefix}_ph_lengths.npy', ph_lengths)
         print(f"| {prefix} total duration: {total_sec:.3f}s")
 
@@ -192,7 +195,7 @@ class BaseBinarizer:
             total_sec += item['sec']
         builder.finalize()
         np.save(f'{data_dir}/{prefix}_lengths.npy', mel_lengths)
-        if len(ph_lengths) > 0:
+        if ph_lengths:
             np.save(f'{data_dir}/{prefix}_ph_lengths.npy', ph_lengths)
         print(f"| {prefix} total duration: {total_sec:.3f}s")
 
@@ -283,7 +286,7 @@ class BaseBinarizer:
             mel2ph, dur = get_mel2ph(tg_fn, ph, mel, hparams['hop_size'], hparams['audio_sample_rate'],
                                      hparams['binarization_args']['min_sil_duration'])
         else:
-            raise BinarizationError(f"Align not found")
+            raise BinarizationError("Align not found")
         if np.array(mel2ph).max() - 1 >= len(ph_token):
             raise BinarizationError(
                 f"Align does not match: mel2ph.max() - 1: {np.array(mel2ph).max() - 1}, len(phone_encoded): {len(ph_token)}")

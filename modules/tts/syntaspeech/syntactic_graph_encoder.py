@@ -25,9 +25,7 @@ def group_hidden_by_segs(h, seg_ids, max_len):
     cnt_gby_segs = h.new_zeros([B, max_len + 1]).scatter_add_(1, seg_ids, all_ones).contiguous()
     h_gby_segs = h_gby_segs[:, 1:]
     cnt_gby_segs = cnt_gby_segs[:, 1:]
-    h_gby_segs = h_gby_segs / torch.clamp(cnt_gby_segs[:, :, None], min=1)
-    # assert h_gby_segs.shape[-1] == 192
-    return h_gby_segs
+    return h_gby_segs / torch.clamp(cnt_gby_segs[:, :, None], min=1)
 
 class GraphAuxEnc(nn.Module):
     def __init__(self, in_dim, hid_dim, out_dim, n_iterations=5, n_edge_types=6):
@@ -85,8 +83,7 @@ class GraphAuxEnc(nn.Module):
     def _postprocess_word2ph(word_encoding, ph2word, t_p):
         word_encoding = F.pad(word_encoding,[0,0,1,0])
         ph2word_ = ph2word[:, :, None].repeat([1, 1, word_encoding.shape[-1]])
-        out = torch.gather(word_encoding, 1, ph2word_)  # [B, T, H]
-        return out
+        return torch.gather(word_encoding, 1, ph2word_)
 
     @staticmethod
     def _repeat_one_sequence(x, d, T):
@@ -116,7 +113,7 @@ class GraphAuxEnc(nn.Module):
         if self.dropout_after_gae:
             gcc2_out = self.ggc_2(batched_graph, gcc2_out, batched_etypes)
         if self.skip_connect:
-            assert self.in_dim == self.hid_dim and self.hid_dim == self.out_dim
+            assert self.in_dim == self.hid_dim == self.out_dim
             gcc2_out = inp + gcc1_out + gcc2_out
 
         word_len = torch.tensor([g.num_nodes() for g in graph_lst]).reshape([-1])
@@ -124,7 +121,7 @@ class GraphAuxEnc(nn.Module):
         has_word_mask = sequence_mask(word_len, max_len)  # [batch, t_p, 1]
         has_word_row_idx = has_word_mask.reshape([-1])
         bs = len(graph_lst)
-        t_w = max([g.num_nodes() for g in graph_lst])
+        t_w = max(g.num_nodes() for g in graph_lst)
         hid = word_encoding.shape[-1]
         output = torch.zeros([bs * t_w, hid]).to(gcc2_out.device)
         output[has_word_row_idx] = gcc2_out
@@ -174,9 +171,11 @@ if __name__ == '__main__':
     text2 = "I love you . You love me . Mixue ice-scream and tea ."
     graph1, etypes1 = parser.parse(text1)
     graph2, etypes2 = parser.parse(text2)
-    batched_text = "<BOS> " + text1 + " <EOS>" + " " + "<BOS> " + text2 + " <EOS>"
+    batched_text = f"<BOS> {text1} <EOS> <BOS> {text2} <EOS>"
     batched_nodes = [graph1.num_nodes(), graph2.num_nodes()]
-    plot_dgl_sentence_graph(dgl.batch([graph1, graph2]), {i: w for i, w in enumerate(batched_text.split(" "))})
+    plot_dgl_sentence_graph(
+        dgl.batch([graph1, graph2]), dict(enumerate(batched_text.split(" ")))
+    )
     etypes_lst = [etypes1, etypes2]
 
     # Unit Test for Graph Encoder forward

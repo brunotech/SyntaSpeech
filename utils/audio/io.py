@@ -8,7 +8,7 @@ def save_wav(wav, path, sr, norm=False):
     if norm:
         wav = wav / np.abs(wav).max()
     wav = wav * 32767
-    wavfile.write(path[:-4] + '.wav', sr, wav.astype(np.int16))
+    wavfile.write(f'{path[:-4]}.wav', sr, wav.astype(np.int16))
     if path[-4:] == '.mp3':
         to_mp3(path[:-4])
 

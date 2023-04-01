@@ -38,5 +38,5 @@ class Timer:
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             Timer.timer_map[self.name] += time.time() - self.t
-            if self.enable:
-                print(f'[Timer] {self.name}: {Timer.timer_map[self.name]}')
+        if self.enable:
+            print(f'[Timer] {self.name}: {Timer.timer_map[self.name]}')

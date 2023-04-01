@@ -10,7 +10,7 @@ class PortaSpeechFlow(PortaSpeech):
         super().__init__(ph_dict_size, word_dict_size, hparams, out_dims)
         cond_hs = 80
         if hparams.get('use_txt_cond', True):
-            cond_hs = cond_hs + hparams['hidden_size']
+            cond_hs += hparams['hidden_size']
         if hparams.get('use_latent_cond', False):
             cond_hs = cond_hs + hparams['latent_size']
         if hparams['use_cond_proj']:
@@ -53,7 +53,6 @@ class PortaSpeechFlow(PortaSpeech):
             g = torch.cat([g, g_z], 1)
         if self.hparams['use_cond_proj']:
             g = self.g_proj(g)
-        prior_dist = self.prior_dist
         if not infer:
             if is_training:
                 self.post_flow.train()
@@ -65,6 +64,7 @@ class PortaSpeechFlow(PortaSpeech):
             z_postflow, ldj = self.post_flow(tgt_mels, nonpadding, g=g)
             ldj = ldj / y_lengths / 80
             ret['z_pf'], ret['ldj_pf'] = z_postflow, ldj
+            prior_dist = self.prior_dist
             ret['postflow'] = -prior_dist.log_prob(z_postflow).mean() - ldj.mean()
             if torch.isnan(ret['postflow']):
                 ret['postflow'] = None

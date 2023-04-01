@@ -86,9 +86,16 @@ class FastSpeech2OrigTask(FastSpeechTask):
                 uv = sample['uv']
             if use_gt_energy:
                 energy = sample['energy']
-            output = self.model(txt_tokens, mel2ph=mel2ph, spk_embed=spk_embed, spk_id=spk_id,
-                                f0=f0, uv=uv, energy=energy, infer=True)
-            return output
+            return self.model(
+                txt_tokens,
+                mel2ph=mel2ph,
+                spk_embed=spk_embed,
+                spk_id=spk_id,
+                f0=f0,
+                uv=uv,
+                energy=energy,
+                infer=True,
+            )
 
     def save_valid_result(self, sample, batch_idx, model_out):
         super(FastSpeech2OrigTask, self).save_valid_result(sample, batch_idx, model_out)
@@ -110,7 +117,7 @@ class FastSpeech2OrigTask(FastSpeechTask):
 
     def add_pitch_loss(self, output, sample, losses):
         if hparams['pitch_type'] == 'cwt':
-            cwt_spec = sample[f'cwt_spec']
+            cwt_spec = sample['cwt_spec']
             f0_mean = sample['f0_mean']
             uv = sample['uv']
             mel2ph = sample['mel2ph']

@@ -29,7 +29,7 @@ class TxtProcessor(BaseTxtProcessor):
         text = re.sub(f"([{PUNCS}])+", r"\1", text)  # !! -> !
         text = re.sub(f"([{PUNCS}])", r" \1 ", text)
         text = re.sub(rf"\s+", r"", text)
-        text = re.sub(rf"[A-Za-z]+", r"$", text)
+        text = re.sub("[A-Za-z]+", r"$", text)
         return text
 
     @classmethod
@@ -42,8 +42,7 @@ class TxtProcessor(BaseTxtProcessor):
                 x_.append(t)
             else:
                 x_ += list(t)
-        x_ = [t if t != '$' else 'ENG' for t in x_]
-        return x_
+        return [t if t != '$' else 'ENG' for t in x_]
 
     @classmethod
     def process(cls, txt, pre_align_args):
@@ -56,16 +55,14 @@ class TxtProcessor(BaseTxtProcessor):
         assert len(shengmu) == len(yunmu)
         ph_list = []
         for a, b in zip(shengmu, yunmu):
-            if a == b:
-                ph_list += [a]
-            else:
-                ph_list += [a + "%" + b]
+            ph_list += [a] if a == b else [f"{a}%{b}"]
         seg_list = '#'.join(jieba.cut(txt))
         assert len(ph_list) == len([s for s in seg_list if s != '#']), (ph_list, seg_list)
 
         # 加入词边界'#'
         ph_list_ = []
         seg_idx = 0
+        finished = False
         for p in ph_list:
             if seg_list[seg_idx] == '#':
                 ph_list_.append('#')
@@ -73,7 +70,6 @@ class TxtProcessor(BaseTxtProcessor):
             elif len(ph_list_) > 0:
                 ph_list_.append("|")
             seg_idx += 1
-            finished = False
             if not finished:
                 ph_list_ += [x for x in p.split("%") if x != '']
 
@@ -82,17 +78,16 @@ class TxtProcessor(BaseTxtProcessor):
         # 去除静音符号周围的词边界标记 [..., '#', ',', '#', ...]
         sil_phonemes = list(PUNCS) + TxtProcessor.sp_phonemes()
         ph_list_ = []
-        for i in range(0, len(ph_list), 1):
+        for i in range(len(ph_list)):
             if ph_list[i] != '#' or (ph_list[i - 1] not in sil_phonemes and ph_list[i + 1] not in sil_phonemes):
                 ph_list_.append(ph_list[i])
         ph_list = ph_list_
         txt_struct = [[w, []] for w in txt]
         i = 0
         for ph in ph_list:
-            if ph == '|' or ph == '#':
+            if ph in ['|', '#']:
                 i += 1
                 continue
-            # elif ph in [',', '.']:
             elif ph in [',', '.', '?', '!']:
                 i += 1
                 txt_struct[i][1].append(ph)

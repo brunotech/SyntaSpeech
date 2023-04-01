@@ -71,9 +71,16 @@ class DiffSpeechTask(FastSpeech2OrigTask):
             if use_gt_f0:
                 f0 = sample['f0']
                 uv = sample['uv']
-            output = self.model(txt_tokens, mel2ph=mel2ph, spk_embed=spk_embed, spk_id=spk_id,
-                                ref_mels=None, f0=f0, uv=uv, infer=True)
-            return output
+            return self.model(
+                txt_tokens,
+                mel2ph=mel2ph,
+                spk_embed=spk_embed,
+                spk_id=spk_id,
+                ref_mels=None,
+                f0=f0,
+                uv=uv,
+                infer=True,
+            )
 
     def save_valid_result(self, sample, batch_idx, model_out):
         sr = hparams['audio_sample_rate']
